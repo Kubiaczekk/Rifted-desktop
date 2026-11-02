@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Rifted",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "identifier": "com.kubiaczekk.rifted",
   "build": {
     "frontendDist": "../dist",
@@ -13,10 +13,14 @@
     "windows": [
       {
         "title": "Rifted",
-        "width": 800,
-        "height": 600,
+        "width": 1400,
+        "height": 960,
+        "minWidth": 1200,
+        "minHeight": 780,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "maximized": false,
+        "center": true
       }
     ],
     "security": {
