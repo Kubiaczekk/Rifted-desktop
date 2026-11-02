@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { api } from './api'
+import { EARLY as META_EARLY, META } from './metaBuilds'
 const DD = 'https://ddragon.leagueoflegends.com'
 type Role = 'Top'|'Jungle'|'Mid'|'ADC'|'Support'
 type Champ = { id: string; key: string; pl: string; title: string; tags: string[]; role: Role; diff: number }
@@ -47,7 +49,8 @@ function stats(c: Champ, rank: number, v: Variant) {
 type T = Record<Variant,string[]> // [core, boots, ...4 items]
 const TPL: Record<string,T> = {
   mage:{meta:['6655','3020','4645','3089','3157','3135'],burst:['4646','3020','4645','3089','3135','3137'],safe:['6655','3158','3157','3102','3089','3135']},
-  apAssassin:{meta:['4646','3020','4645','3089','3157','3135'],burst:['3152','3020','4645','3100','3089','3135'],safe:['3152','3158','3157','3102','3089','3135']},
+  apAssassin:{meta:['3100','3020','4645','3089','3157','3041'],burst:['3100','3020','4645','3089','3115','3135'],safe:['3100','3111','4645','3157','3089','3102']},
+  apBruiser:{meta:['4633','3020','3115','3157','3089','3135'],burst:['4633','3020','3115','4645','3089','3135'],safe:['4633','3111','3157','3115','3102','3089']},
   adAssassin:{meta:['6697','3158','6692','3814','6694','3026'],burst:['6697','3158','3179','6694','3814','6692'],safe:['6692','3047','3814','3053','3026','3156']},
   adc:{meta:['3032','3006','3031','3094','3036','3026'],burst:['6676','3006','3031','3036','3033','3072'],safe:['3032','3006','3031','3046','3139','3026']},
   fighter:{meta:['6610','3047','3071','3053','6333','3065'],burst:['6610','3158','3071','6694','6333','3053'],safe:['6610','3047','3053','6333','3065','3742']},
@@ -58,7 +61,7 @@ const TPL: Record<string,T> = {
 const JTPL: Record<string,T> = {
   jungle:{meta:['6610','3047','3071','3053','6333','3065'],burst:['6692','3158','3071','6694','6333','3053'],safe:['6610','3047','3053','3742','6333','3065']},
   jungleAD:{meta:['6698','3158','6697','6696','6694','3814'],burst:['6697','3158','6698','6696','6694','3814'],safe:['6698','3047','6692','3814','6333','3053']},
-  jungleAP:{meta:['4646','3020','4645','3089','3157','3135'],burst:['4646','3020','4645','3089','3135','3157'],safe:['6653','3020','4633','3157','3089','3135']},
+  jungleAP:{meta:['6653','3020','3115','3157','3089','3135'],burst:['4646','3020','3115','4645','3089','3135'],safe:['4633','3111','3157','3115','3102','6653']},
   jungleTank:{meta:['3084','3047','3068','6665','3075','4401'],burst:['3068','3111','6665','3742','3084','4401'],safe:['3084','3111','6665','4401','3075','3065']},
 }
 const CUR: Record<string,T> = {
@@ -75,22 +78,26 @@ const CUR: Record<string,T> = {
   Twitch:{meta:['6676','3006','2512','3031','3036','3026'],burst:['6676','3006','3031','3036','3072','3026'],safe:['3032','3006','3031','3046','3139','3026']},
   Jinx:{meta:['3032','3006','3031','3094','3036','3026'],burst:['3032','3006','3031','3033','3036','3072'],safe:['3032','3006','3031','3046','3139','3026']},
   Vayne:{meta:['3153','3006','3124','3091','6672','3026'],burst:['3153','3006','3124','6672','3033','3072'],safe:['3153','3006','3124','3091','3139','3026']},
+  Katarina:{meta:['3100','3020','4645','3089','3157','3041'],burst:['3100','3020','4645','3089','3115','3135'],safe:['3100','3111','4645','3157','3089','3102']},
 }
-const AP = new Set(['Akali','Diana','Ekko','Evelynn','Fizz','Katarina','Leblanc','Nidalee','Elise','Gwen','Mordekaiser','Sylas','Gragas','Lillia','Kennen','Rumble','Singed','Vladimir','Swain','Karthus','Teemo','Kayle','Shaco','Neeko','Sylas','Zoe','Vex'])
+const AP_ASSASSIN = new Set(['Akali','Diana','Ekko','Evelynn','Fizz','Katarina','Leblanc','Elise','Nidalee','Shaco','Sylas'])
+const AP_BRUISER = new Set(['Gwen','Mordekaiser','Gragas','Lillia','Rumble','Kennen','Singed','Vladimir','Kayle','Teemo'])
 const TANK_SUP = new Set(['Leona','Alistar','Braum','Nautilus','Rell','Taric','Thresh','Rakan','Blitzcrank','Pyke','TahmKench','Maokai','Poppy','Amumu'])
 function tplOf(c: Champ): string {
   const t = c.tags[0]
   if (c.role==='Support') return TANK_SUP.has(c.id) || t==='Tank' ? 'tankSup' : t==='Mage' ? 'mage' : 'enchanter'
   if (c.role==='ADC') return t==='Mage' ? 'mage' : 'adc'
   if (t==='Mage') return 'mage'
-  if (AP.has(c.id)) return 'apAssassin'
+  if (AP_BRUISER.has(c.id)) return 'apBruiser'
+  if (AP_ASSASSIN.has(c.id)) return 'apAssassin'
   if (t==='Assassin') return 'adAssassin'
   if (t==='Marksman') return 'adc'
   if (t==='Tank') return 'tank'
   return 'fighter'
 }
 function build(c: Champ, items: Item[], v: Variant, _rank: number) {
-  const ids = (CUR[c.id] || (c.role==='Jungle' ? JTPL[tplKey(c)] : TPL[c.role==='Support' && tplOf(c)==='mage' ? 'mage' : tplOf(c)]))[v], m = new Map(items.map(i => [i.id, i]))
+  const base = META[c.id] || CUR[c.id] || (c.role==='Jungle' ? JTPL[tplKey(c)] : TPL[c.role==='Support' && tplOf(c)==='mage' ? 'mage' : tplOf(c)])
+  const ids = base[v], m = new Map(items.map(i => [i.id, i]))
   return ids.map(id => m.get(id)).filter(Boolean) as Item[]
 }
 type Early = { start: string[]; back: string[]; gold: string; tip: string }
@@ -107,6 +114,7 @@ const ETPL: Record<string,Early> = {
   jungleAP:{start:['1101','2003'],back:['1026','2055'],gold:'',tip:'Full clear = lvl 4. Pierwszy back: Wybuchowa Różdżka (850) lub Tom pod pierwszy item + Control Ward.'},
   jungleTank:{start:['1103','2003'],back:['1028','2055','1001'],gold:'',tip:'Mosstomper na start. Full clear = lvl 4. Pierwszy back: Rubin + Control Ward (+ buty jeśli zostaje).'},
   jungleAD:{start:['1101','2003'],back:['3134','2055'],gold:'',tip:'Full clear = lvl 4. Pierwszy back: Ząbkowany Sztylet (Dirk) + Control Ward — lethality spike pod ganki.'},
+  apBruiser:{start:['1056','2003','2003'],back:['1026','1001'],gold:'~850–1200 g',tip:'Pierwszy back: Wybuchowa Różdżka albo komponent pod Riftmaker / Nashor. Buty Maga, Mercury gdy dużo CC.'},
 }
 const ECUR: Record<string,Early> = {
   Hecarim:{start:['1102','2003'],back:['3057','2055'],gold:'',tip:'Gustwalker na start — szybkie rotacje i ganki. Full clear = lvl 4 (~3:10), potem skuttle albo gank z E. Pierwszy back: Sheen (Lśnienie) pod Włócznię Shojin (albo Kilof/Rubin, gdy brakuje golda) + Control Ward. Buty (Lucidity) dopiero przy drugim zakupie.'},
@@ -127,41 +135,90 @@ const ECUR: Record<string,Early> = {
   Zed:{start:['1036','2003','2003','2003'],back:['3134','2003'],gold:'~1000 g',tip:'Ząbkowany Sztylet = spike na all-in po 6.'},
   LeeSin:{start:['1101','2003'],back:['1036','1001','2055'],gold:'~700–1000 g',tip:'Scorchclaw, ganki od 3 lvl. Na backu Długi Miecz + ward kontrolny.'},
   Garen:{start:['1054','2003'],back:['1001','1036'],gold:'~650 g',tip:'Tarcza Dorana dla sustainu, potem buty i Długi Miecz.'},
+  Katarina:{start:['1082','2031'],back:['3113','3057'],gold:'~700–1100 g',tip:'Dark Seal na start. Pierwszy back: Eteryczny Duszek albo Blask pod Lich Bane. Buty Maga, Mercury gdy dużo CC.'},
 }
-function early(c: Champ): Early { if (ECUR[c.id]) return ECUR[c.id]; if (c.role==='Support') return ETPL[TANK_SUP.has(c.id)||c.tags[0]==='Tank'?'tankSup':'enchanter']; if (c.role==='ADC') return ETPL.adc; if (c.role!=='Jungle') return ETPL[tplOf(c)]; const t = tplOf(c); return t==='mage'||t==='apAssassin' ? ETPL.jungleAP : t==='tank' ? ETPL.jungleTank : t==='adAssassin' ? ETPL.jungleAD : ETPL.jungle }
+function early(c: Champ): Early {
+  const live = META_EARLY[c.id]
+  if (live?.start?.length) return live
+  if (ECUR[c.id]) return ECUR[c.id]
+  if (c.role==='Support') return ETPL[TANK_SUP.has(c.id)||c.tags[0]==='Tank'?'tankSup':'enchanter']
+  if (c.role==='ADC') return ETPL.adc
+  if (c.role!=='Jungle') return ETPL[tplOf(c)] || ETPL.fighter
+  const t = tplOf(c)
+  return t==='mage'||t==='apAssassin'||t==='apBruiser' ? ETPL.jungleAP : t==='tank' ? ETPL.jungleTank : t==='adAssassin' ? ETPL.jungleAD : ETPL.jungle
+}
 export const VTIP: Record<Variant,string> = {
   meta:'Najczęściej wybierany zestaw na tej randze — stabilny w każdej grze.',
   burst:'Pod bombę: maksymalne obrażenia w krótkim czasie, łap squishy (ADC, mid) z flanki.',
   safe:'Bezpieczniej: więcej HP i odporności, graj pod drużynę i nie dawaj killi.',
 }
-const OTP_N=['Faker','Chovy','Caps','ShowMaker','Agurin','Thebausffs','Dzukill','Vetheo','Nemesis','Humanoid','Kiin','Zeus','Ruler','Keria','Elk','Drututt','Odoamne','Jankos','Upset','Hans Sama','Saken','Yike','Razork','Peyz','Gumayusi']
-const OTP_S=['KR','EUW','EUNE','NA','KR','EUW','VN','BR']
-const OTP_T=['Challenger','Challenger','Grandmaster']
-function otps(c: Champ){ return [0,1,2].map(i=>{ const h=hash(c.id+'otp'+i), n=OTP_N[Math.floor(h*OTP_N.length)]+(i?Math.floor(hash(c.id+i)*99):''); const lp=Math.round(1900-i*260-h*300); return {n:`${n} ${c.id.slice(0,3)}`,srv:OTP_S[Math.floor(hash(c.id+'s'+i)*OTP_S.length)],tier:lp>1100?OTP_T[0]:OTP_T[2],lp,pct:Math.round(92-i*6-h*15),wr:(56+hash(c.id+'w'+i)*8).toFixed(1),g:Math.round(400+h*900)} }) }
-type Otp={n:string,srv:string,tier:string,lp:number,pct:number,wr:string,g:number}
-function games10(c:Champ,o:Otp,champs:Champ[]){ return Array.from({length:10},(_,i)=>{ const h=hash(o.n+'g'+i), own=h<o.pct/100, ch=own?c:(champs[Math.floor(hash(o.n+'c'+i)*champs.length)]||c)
-  const win=hash(o.n+'w'+i)<+o.wr/100, k=Math.round(hash(o.n+'k'+i)*(win?14:8)), d=Math.round(hash(o.n+'d'+i)*(win?5:9))+(win?0:1), a=Math.round(hash(o.n+'a'+i)*14)
-  const vs=['meta','burst','safe'] as Variant[], b=(CUR[ch.id]||TPL[tplOf(ch)])[vs[Math.floor(hash(o.n+'v'+i)*3)]], it=[b[0],b[1],...b.slice(2)].slice(0,6-Math.floor(hash(o.n+'n'+i)*(win?1:2.5)))
-  return {ch,win,k,d,a,it,min:Math.round(22+hash(o.n+'m'+i)*16),ago:i===0?'przed chwilą':`${i*2+1} h temu`} }) }
-function PlayerModal({o,c,champs,items:_items,img,close}:{o:Otp,c:Champ,champs:Champ[],items:Item[],img:(p:string)=>string,close:()=>void}){
-  useEffect(()=>{const f=(e:KeyboardEvent)=>e.key==='Escape'&&close();addEventListener('keydown',f);return()=>removeEventListener('keydown',f)},[close])
-  const gs=useMemo(()=>games10(c,o,champs),[c,o,champs]), w=gs.filter(g=>g.win).length, K=gs.reduce((x,g)=>x+g.k,0),D=gs.reduce((x,g)=>x+g.d,0),A=gs.reduce((x,g)=>x+g.a,0)
-  useEffect(()=>{const b=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=b}},[])
-  return createPortal(<div className="pm-back" onClick={close} style={{position:'fixed',inset:0,zIndex:10000,display:'flex',alignItems:'center',justifyContent:'center',padding:24,background:'rgba(5,5,12,.72)',backdropFilter:'blur(6px)'}}><div className="glass pm" onClick={e=>e.stopPropagation()} style={{position:'relative',width:'min(720px,100%)',maxHeight:'calc(100vh - 48px)',overflowY:'auto',margin:0}}>
+type OtpPlayer = { nick: string; tag: string; region: string; tier: string; rank: string; lp: number; winRate: number; games: number; iconId: number | null }
+const REGION_SHORT: Record<string, string> = {
+  euw1: 'EUW', euw: 'EUW', eun1: 'EUNE', eun: 'EUNE', eune: 'EUNE', na1: 'NA', na: 'NA', kr: 'KR', kr1: 'KR',
+  br1: 'BR', br: 'BR', jp1: 'JP', jp: 'JP', la1: 'LAN', lan: 'LAN', la2: 'LAS', las: 'LAS', oc1: 'OCE', oce: 'OCE',
+  tr1: 'TR', tr: 'TR', ru: 'RU', vn2: 'VN', vn: 'VN', tw2: 'TW', tw: 'TW', sg2: 'SG', me1: 'ME', ph2: 'PH', th2: 'TH',
+}
+function shortRegion(region: string) {
+  const k = region.trim().toLowerCase()
+  return REGION_SHORT[k] || (k ? region.trim().toUpperCase() : '—')
+}
+function prettyTier(tier: string) {
+  const t = tier.trim()
+  if (!t) return ''
+  if (t !== t.toUpperCase() && t !== t.toLowerCase()) return t
+  return t.toLowerCase().replace(/(^|[\s_-])(\p{L})/gu, (_, a, b) => a + b.toUpperCase())
+}
+function fmtTier(tier: string, rank: string) {
+  const t = prettyTier(tier), r = rank.trim()
+  if (!t) return prettyTier(r) || '—'
+  if (!r || r === '0' || /^null|undefined$/i.test(r) || r.toLowerCase() === t.toLowerCase()) return t
+  if (/^(i|ii|iii|iv)$/i.test(r)) return `${t} ${r.toUpperCase()}`
+  return `${t} ${prettyTier(r)}`
+}
+function fmtWr(winRate: number) {
+  if (!Number.isFinite(winRate)) return '—'
+  const pct = winRate >= 0 && winRate <= 1 ? winRate * 100 : winRate
+  return pct.toFixed(1)
+}
+function num(v: unknown) {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN
+  return Number.isFinite(n) ? n : null
+}
+function topOtps(body: { players?: unknown } | null | undefined): OtpPlayer[] {
+  if (!Array.isArray(body?.players)) return []
+  const rows: OtpPlayer[] = []
+  for (const raw of body.players) {
+    if (!raw || typeof raw !== 'object') continue
+    const p = raw as Record<string, unknown>
+    const nick = String(p.nick ?? '').trim()
+    if (!nick) continue
+    const icon = num(p.iconId)
+    rows.push({
+      nick, tag: String(p.tag ?? '').trim(), region: String(p.region ?? ''),
+      tier: String(p.tier ?? ''), rank: String(p.rank ?? ''),
+      lp: num(p.lp) ?? 0, winRate: num(p.winRate) ?? 0, games: Math.max(0, Math.round(num(p.games) ?? 0)),
+      iconId: icon && icon > 0 ? Math.round(icon) : null,
+    })
+  }
+  return rows.sort((a, b) => b.lp - a.lp).slice(0, 3)
+}
+function riotId(o: OtpPlayer) { return o.tag ? `${o.nick}#${o.tag}` : o.nick }
+function PlayerModal({ o, c, ver, close }: { o: OtpPlayer; c: Champ; ver: string; close: () => void }) {
+  const [bad, setBad] = useState(false)
+  useEffect(() => { const f = (e: KeyboardEvent) => e.key === 'Escape' && close(); addEventListener('keydown', f); return () => removeEventListener('keydown', f) }, [close])
+  useEffect(() => { const b = document.body.style.overflow; document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = b } }, [])
+  const name = riotId(o), region = shortRegion(o.region), tier = fmtTier(o.tier, o.rank)
+  const src = !bad && ver && o.iconId ? `${DD}/cdn/${ver}/img/profileicon/${o.iconId}.png` : ''
+  return createPortal(<div className="pm-back" onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: 'rgba(5,5,12,.72)', backdropFilter: 'blur(6px)' }}><div className="glass pm" onClick={e => e.stopPropagation()} style={{ position: 'relative', width: 'min(560px,100%)', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', margin: 0 }}>
     <button className="pill pm-x" onClick={close} aria-label="Zamknij">✕</button>
-    <div className="pm-head"><div className="pm-av"><img src={img(`champion/${c.id}.png`)} alt=""/></div><h2>{o.n}</h2><div className="pm-tags"><span>{o.srv}</span><span>{o.tier}</span><span className="pm-lp">{o.lp} LP</span></div></div>
+    <div className="pm-head"><div className="pm-av">{src ? <img className="pm-pi" src={src} alt="" onError={() => setBad(true)} /> : <span className="pm-letter">{(o.nick || '?').slice(0, 1).toUpperCase()}</span>}</div><h2>{name}</h2><div className="pm-tags"><span>{region}</span><span>{tier}</span><span className="pm-lp">{Math.round(o.lp)} LP</span></div></div>
     <div className="pm-stats">
-      <div className="item"><b>{o.wr}%</b><span>WR na {c.pl}</span></div>
-      <div className="item"><b>{o.g}</b><span>Gier na {c.pl}</span></div>
-      <div className="item"><b>{o.pct}%</b><span>Gier tym champem</span></div>
-      <div className="item"><b>{w}W {10-w}L</b><span>Ostatnie 10</span></div>
-      <div className="item"><b>{((K+A)/Math.max(1,D)).toFixed(2)}</b><span>KDA (10 gier)</span></div>
+      <div className="item"><b>{fmtWr(o.winRate)}%</b><span>WR na {c.pl}</span></div>
+      <div className="item"><b>{o.games.toLocaleString('pl')}</b><span>Gier na {c.pl}</span></div>
+      <div className="item"><b>{tier}</b><span>Ranga</span></div>
+      <div className="item"><b>{Math.round(o.lp)}</b><span>LP</span></div>
+      <div className="item"><b>{region}</b><span>Region</span></div>
     </div>
-    <h3 className="pm-h3">Ostatnie 10 gier</h3>
-    <div className="pm-games">{gs.map((g,i)=><div key={i} className={'pm-g '+(g.win?'win':'loss')}>
-      <b className="pm-r">{g.win?'W':'L'}</b><img src={img(`champion/${g.ch.id}.png`)} alt=""/><span className="pm-c">{g.ch.pl}</span>
-      <span className="pm-k">{g.k} / {g.d} / {g.a}</span><small className="muted">{((g.k+g.a)/Math.max(1,g.d)).toFixed(1)} KDA · {g.min} min · {g.ago}</small><div className="pm-it">{Array.from({length:6},(_,j)=>g.it[j]?<img key={j} src={img(`item/${g.it[j]}.png`)} alt=""/>:<i key={j}/>)}</div></div>)}</div>
-    <p className="muted pm-note">Dane poglądowe — live z API wkrótce.</p>
   </div></div>, document.body)
 }
 
@@ -273,7 +330,7 @@ const PCUR: Record<string,Partial<Plan>> = {
 function planOf(c: Champ): Plan { const b = planOfBase(c); return PCUR[c.id] ? {...b, ...PCUR[c.id]} as Plan : b }
 function planOfBase(c: Champ): Plan { const t = tplOf(c); return c.role==='Jungle' ? PTPL.jungle : t==='adc' ? PTPL.adc : PTPL.lane }
 function comboOf(c: Champ, order: string[]) { if (CCUR[c.id]) return CCUR[c.id]; const [a,b] = order; return [{keys:[a,'E'===a?b:'E','R'].filter((x,i,arr)=>arr.indexOf(x)===i),txt:`Otwórz ${a}, dołóż drugi skill i dokończ R, gdy cel ma niski HP. Szukaj auto-ataków między skillami.`}] }
-function tplKey(c: Champ): string { const t = tplOf(c); if (c.role!=='Jungle') return RTPL[t] ? t : 'fighter'; return t==='mage'||t==='apAssassin' ? 'jungleAP' : t==='tank' ? 'jungleTank' : t==='adAssassin' ? 'jungleAD' : 'jungle' }
+function tplKey(c: Champ): string { const t = tplOf(c); if (c.role!=='Jungle') return RTPL[t] ? t : 'fighter'; return t==='mage'||t==='apAssassin'||t==='apBruiser' ? 'jungleAP' : t==='tank' ? 'jungleTank' : t==='adAssassin' ? 'jungleAD' : 'jungle' }
 function runesOf(c: Champ): Rune[] { if (RCUR2[c.id]) return RCUR2[c.id]; const k = tplKey(c); return [{...RTPL[k], n:'Meta'}, RALT[k]].filter(Boolean) }
 function Poradnik({c, champs, ver, img}:{c:Champ, champs:Champ[], ver:string, img:(p:string)=>string}) {
   const [sp, setSp] = useState<{name:string, image:{full:string}}[]>([])
@@ -309,10 +366,21 @@ function Poradnik({c, champs, ver, img}:{c:Champ, champs:Champ[], ver:string, im
 }
 
 export default function Guides() {
-  const [pl, setPl] = useState<Otp|null>(null), [tab, setTab] = useState<'build'|'guide'>('build')
+  const [pl, setPl] = useState<OtpPlayer|null>(null), [tab, setTab] = useState<'build'|'guide'>('build')
+  const [otpRows, setOtpRows] = useState<OtpPlayer[]>([])
+  const [otpSt, setOtpSt] = useState<'idle'|'load'|'ok'|'err'>('idle')
   const [ver, setVer] = useState(''), [champs, setChamps] = useState<Champ[]>([]), [items, setItems] = useState<Item[]>([])
   const [err, setErr] = useState(''), [q, setQ] = useState(''), [role, setRole] = useState<Role|'Wszystkie'>('Wszystkie')
   const [sel, setSel] = useState<Champ|null>(null), [rank, setRank] = useState(3), [v, setV] = useState<Variant>('meta')
+  useEffect(() => {
+    const key = sel?.key
+    if (!key) return
+    let alive = true
+    api<{ players?: unknown }>(`/api/champions/${encodeURIComponent(key)}/otp`)
+      .then(j => { if (!alive) return; setOtpRows(topOtps(j)); setOtpSt('ok') })
+      .catch(() => { if (!alive) return; setOtpRows([]); setOtpSt('err') })
+    return () => { alive = false }
+  }, [sel?.key])
   useEffect(() => { (async () => {
     try {
       const vv: string = (await (await fetch(`${DD}/api/versions.json`)).json())[0]; setVer(vv)
@@ -340,7 +408,7 @@ export default function Guides() {
     const c = sel, L = live(c), f = stats(c, rank, v), s = L ? { ...f, wr: L.wr, pr: L.pr, games: L.games } : f, tr = L?.tier || tierOf(+f.wr, +f.pr), b = build(c, items, v, rank), e = early(c), im = new Map(items.map(i => [i.id, i])), row = (ids: string[]) => <div className="items">{ids.map((id, k) => { const it = im.get(id); return it ? <div key={id+k} className="item" title={`${it.gold} g`}><img src={img(`item/${id}.png`)} alt={it.name} /><span>{it.name} · {it.gold} g</span></div> : null })}</div>
     return (
       <div className="glass guide">
-        <button className="pill" onClick={() => { setSel(null); setPl(null); setTab('build') }}>← Wróć do listy</button>
+        <button className="pill" onClick={() => { setSel(null); setPl(null); setOtpRows([]); setOtpSt('idle'); setTab('build') }}>← Wróć do listy</button>
         <div className="ghead">
           <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}><img className="gicon big" src={img(`champion/${c.id}.png`)} alt={c.pl} /><span className={'tier '+tr}>{tr}</span></div>
           <div><h1>{c.pl}</h1><p className="muted">{c.title} · {c.role} · {c.tags.join(' / ')}</p></div>
@@ -365,11 +433,14 @@ export default function Guides() {
         ))}</div></div>
         <h3>Wskazówka</h3><p className="tip">💡 {TIPS[c.id] || `${c.pl} (${c.tags.join('/')}) — ${c.diff>=7?'trudny champion, ćwicz combo w trybie treningowym.':'graj pod swoje power spiki i farm.'}`}</p>
         <h3>🏆 Top 3 onetricków (świat)</h3>
-        <div className="otps">{otps(c).map((o,i)=>(
-          <div key={i} className="otp"><b className="otpn">#{i+1}</b><div><button className="otpl" onClick={()=>setPl(o)} title="Pokaż profil gracza"><b>{o.n}</b></button> <small className="muted">{o.srv}</small><br/><small>{o.tier} · <b>{o.lp} LP</b></small></div><div className="otps-r"><b>{o.pct}%</b> gier na {c.pl}<br/><small className="muted">WR {o.wr}% · {o.g} gier</small></div></div>))}
-        </div><p className="muted" style={{fontSize:12}}>Ranking poglądowy — live z API wkrótce.</p></>}
+        {(otpSt === 'load' || otpSt === 'idle') && <p className="muted">Ładowanie onetricków…</p>}
+        {otpSt === 'err' && <p className="muted">Nie udało się pobrać rankingu.</p>}
+        {otpSt === 'ok' && !otpRows.length && <p className="muted">Brak onetricków.</p>}
+        {otpSt === 'ok' && otpRows.length > 0 && <div className="otps">{otpRows.map((o, i) => (
+          <div key={`${o.region}:${riotId(o)}:${i}`} className="otp"><b className="otpn">#{i + 1}</b><div><button className="otpl" onClick={() => setPl(o)} title="Pokaż profil gracza"><b>{riotId(o)}</b></button> <small className="muted">{shortRegion(o.region)}</small><br /><small>{fmtTier(o.tier, o.rank)} · <b>{Math.round(o.lp)} LP</b></small></div><div className="otps-r"><b>WR {fmtWr(o.winRate)}%</b><br /><small className="muted">{o.games.toLocaleString('pl')} gier</small></div></div>))}
+        </div>}</>}
         {note}
-        {pl && <PlayerModal o={pl} c={c} champs={champs} items={items} img={img} close={()=>setPl(null)}/>}
+        {pl && <PlayerModal key={`${pl.region}:${riotId(pl)}`} o={pl} c={c} ver={ver} close={() => setPl(null)} />}
       </div>
     )
   }
@@ -383,7 +454,7 @@ export default function Guides() {
       {!champs.length && !err && <p className="muted">Ładowanie championów…</p>}
       <div className="grid">
         {list.map(c => { const L = live(c), f = stats(c, rank, 'meta'), s = L || f, tr = L?.tier || tierOf(+f.wr, +f.pr); return (
-          <button key={c.id} className="card" onClick={() => { setSel(c); setV('meta') }}>
+          <button key={c.id} className="card" onClick={() => { setSel(c); setV('meta'); setPl(null); setOtpRows([]); setOtpSt('load') }}>
             <img className="gicon" src={img(`champion/${c.id}.png`)} alt={c.pl} loading="lazy" /><span className={'tier '+tr}>{tr}</span>
             <b>{c.pl}</b><small>{c.role}</small><small>WR {s.wr}% · PR {s.pr}%</small>
           </button>) })}

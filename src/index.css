@@ -186,7 +186,8 @@ button.otpl{background:none;border:0;padding:0;color:inherit;font:inherit;cursor
 .glass.pm::before{content:"";position:absolute;inset:0 0 auto 0;height:150px;border-radius:22px 22px 0 0;background:radial-gradient(ellipse at 50% 0,color-mix(in srgb,var(--a) 35%,transparent),transparent 70%);pointer-events:none}
 .pm-x{top:14px!important;right:14px!important;width:34px;height:34px;padding:0!important;border-radius:50%!important;display:grid;place-items:center;transition:transform .2s,background .2s}.pm-x:hover{transform:rotate(90deg) scale(1.08)}
 .pm-head{position:relative;flex-direction:column;align-items:center;text-align:center;gap:10px;margin:0 0 24px}
-.pm-av{width:84px;height:84px;border-radius:50%;overflow:hidden;animation:pmGlow 3s ease-in-out infinite}.pm-av img{width:100%;height:100%;object-fit:cover;transform:scale(1.12)}
+.pm-av{width:84px;height:84px;border-radius:50%;overflow:hidden;animation:pmGlow 3s ease-in-out infinite;display:grid;place-items:center}.pm-av img{width:100%;height:100%;object-fit:cover;transform:scale(1.12)}
+.pm-av img.pm-pi{transform:none}.pm-letter{font-family:'Black Han Sans','Noto Sans PL Heavy',sans-serif;font-size:34px;line-height:1;color:#fff}
 .pm-head h2{font-family:'Black Han Sans','Noto Sans PL Heavy',sans-serif;font-weight:400;font-size:30px;letter-spacing:.5px;line-height:1.15;margin:4px 0 0;text-shadow:0 0 18px color-mix(in srgb,var(--a) 50%,transparent)}
 .pm-tags{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.pm-tags span{font-size:12px;font-weight:700;padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);letter-spacing:.3px}
 .pm-tags .pm-lp{background:color-mix(in srgb,var(--a) 28%,transparent);border-color:color-mix(in srgb,var(--a) 60%,transparent)}
@@ -463,6 +464,7 @@ button.otpl{background:none;border:0;padding:0;color:inherit;font:inherit;cursor
 .hm-foot{margin-top:28px;padding:14px 18px;border-top:1px solid rgba(168,85,247,.35);background:rgba(20,8,40,.55);border-radius:12px;display:flex;flex-direction:column;gap:6px;font-size:13px;color:#cbb6f0;text-align:center}
 .hm-foot b{color:#c084fc}
 .app-foot{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 16px;font-size:12px;color:#cbb6f0;text-align:center;background:rgba(11,8,32,.55);backdrop-filter:blur(6px);border-top:1px solid rgba(168,85,247,.25);pointer-events:none}
+.app-foot a{color:#f3e8ff;pointer-events:auto;text-decoration:underline;text-underline-offset:2px}
 .app-foot b{color:#c084fc}.af-sep{opacity:.5}
 .main{padding-bottom:56px}
 
@@ -625,3 +627,59 @@ button.otpl{background:none;border:0;padding:0;color:inherit;font:inherit;cursor
 .ps-fallback{display:grid;place-items:center;background:linear-gradient(135deg,var(--a),var(--b));color:#fff}
 .r-Grandmaster{color:#e879f9}.r-Challenger{color:#fbbf24}.r-Unranked{color:#a8a29e}
 @media (max-width:760px){.lfd{grid-template-columns:1fr;height:auto}.ps-stats{grid-template-columns:1fr 1fr}.ps-screen .ps-form{flex-wrap:wrap}}
+
+/* Denser chrome — header, pills, and controls stay readable */
+.top{gap:10px;margin:8px 10px;padding:5px 12px 5px 18px}
+.pills{gap:6px}
+.pill{font-size:12.5px;padding:5px 12px;letter-spacing:.2px}
+.pill.big,.big{padding:8px 12px}
+.wm{height:46px;padding:0 8px 0 6px}
+.wm-ring{width:42px;height:42px;margin-top:-21px;left:4px}
+.wm-r{font-size:40px}
+.wm-i{font-size:22px}
+.wm-rift{top:4px;bottom:4px}
+.logo{gap:6px}
+.pill:hover,.tabs button:hover{transform:scale(1.03)}
+.main{padding:16px 14px 56px}
+.glass{padding:22px 24px;border-radius:22px}
+.hero h1{font-size:32px}
+.guide h1{font-size:28px}
+input,.search{padding:8px 14px;font-size:13px}
+.tabs{margin-bottom:14px}
+.tabs button{padding:6px 10px;font-size:13px}
+.themebtn{padding:6px 12px;font-size:13px}
+.card{padding:10px;border-radius:14px}
+.gicon{width:52px;height:52px}
+.gicon.big{width:72px;height:72px}
+.msg-in .pill,.ps-screen .ps-form .pill{padding:7px 14px}
+.nbadge{min-width:16px;height:16px;font-size:10px;margin-left:6px}
+
+.users-dock{position:fixed;left:14px;bottom:46px;z-index:40;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.users-tile{padding:7px 14px;border-radius:999px;border:1px solid color-mix(in srgb,var(--a) 55%,transparent);background:rgba(10,8,25,.82);color:var(--t);font-size:13px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.users-tile:hover{transform:translateY(-1px)}
+.users-panel{width:min(320px,calc(100vw - 28px));max-height:min(420px,60vh);overflow:auto;padding:12px;border-radius:16px;text-align:left}
+.users-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.users-h b{font-size:15px}
+.users-h .pill{padding:2px 8px}
+.users-list{display:flex;flex-direction:column;gap:4px}
+.users-row{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:7px 8px;border-radius:10px;border:1px solid transparent;background:rgba(255,255,255,.04);color:#fff;cursor:pointer}
+.users-row:hover{border-color:color-mix(in srgb,var(--a) 50%,transparent);background:rgba(255,255,255,.08)}
+.users-presence{width:8px;height:8px;border-radius:50%;flex:none}
+.users-presence.on{background:#22c55e;box-shadow:0 0 6px #22c55e99}
+.users-presence.off{background:#ef4444}
+.users-nick{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.users-row em{font-style:normal;font-size:10px;padding:2px 6px;border-radius:999px;background:color-mix(in srgb,var(--a) 28%,transparent)}
+.users-row small{font-size:11px;opacity:.75}
+.admin{width:min(860px,94vw);max-height:78vh;overflow:auto;text-align:left}
+.admin h1{font-size:26px;margin:0 0 6px}
+.admin-err{color:#ffb4b4}
+.admin-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:14px 0}
+.admin-stats div{padding:10px 8px;border-radius:12px;background:rgba(255,255,255,.05);text-align:center}
+.admin-stats b{display:block;font-size:18px}
+.admin-stats span{font-size:11px;opacity:.75}
+.admin-list{display:flex;flex-direction:column;gap:6px}
+.admin-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.04)}
+.admin-row p{margin:4px 0 0;font-size:13px}
+.admin-row em{font-style:normal;font-size:10px;margin-left:6px;padding:2px 6px;border-radius:999px;background:color-mix(in srgb,var(--a) 28%,transparent)}
+.other-prof{width:min(560px,94vw)}
+@media (max-width:760px){.admin-stats{grid-template-columns:1fr 1fr}}

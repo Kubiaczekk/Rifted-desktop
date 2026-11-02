@@ -15,7 +15,10 @@ import AiHelp from './AiHelp'
 import Lfd from './Lfd'
 import PlayerSearch from './PlayerSearch'
 import Messages, { syncConversations, loadThreads, type Thread } from './Messages'
-type Screen = 'home' | 'guides' | 'lfd' | 'find' | 'ai' | 'msgs' | 'auth' | 'profile'
+import UsersDock from './UsersDock'
+import Admin from './Admin'
+import { api } from './api'
+type Screen = 'home' | 'guides' | 'lfd' | 'find' | 'ai' | 'msgs' | 'auth' | 'profile' | 'admin'
 const content: Record<'home'|'guides'|'lfd'|'profile', { title: string; text: string }> = {
   home: { title: 'Witaj w Rifted', text: 'Twoje polskie miejsce na Summoner\'s Rift.' },
   guides: { title: 'Poradniki', text: 'Lista gajdów, ranking (lajk/dislike) i kreator buildów — wkrótce.' },
@@ -40,7 +43,15 @@ export default function App() {
   const setUser = (u: string | null) => { setUserRaw(u); if (u) localStorage.setItem('rifted-user', u); else { localStorage.removeItem('rifted-user'); localStorage.removeItem('rifted-threads'); setThreads(() => []); logout() } }
   useEffect(() => { if (!user) return; let first = true; const go = () => { syncConversations(setThreads, chat, first).catch(() => {}); first = false }; go(); const iv = setInterval(go, 15000); return () => clearInterval(iv) }, [user, chat])
   const [after, setAfter] = useState<Screen>('profile')
-  const GATED: Screen[] = ['lfd','find','ai','msgs','profile']
+  const [who, setWho] = useState<{ id: number; nick: string } | null>(null)
+  const GATED: Screen[] = ['lfd','find','ai','msgs','profile','admin']
+  useEffect(() => {
+    if (!user) return
+    const ping = () => { api('/api/presence', { method: 'POST', body: {} }).catch(() => {}) }
+    ping()
+    const id = setInterval(ping, 25000)
+    return () => clearInterval(id)
+  }, [user])
   const locked = (k: Screen) => !user && GATED.includes(k)
   const [tab, setTab] = useState<'login' | 'register'>('login')
   const [nick, setNick] = useState('')
@@ -60,7 +71,7 @@ export default function App() {
           ))}
         </nav>
         {user
-          ? <button className={s==='profile'?'pill cta active':'pill cta'} onClick={() => setS('profile')}>Profil · {user}</button>
+          ? <button className={s==='profile'?'pill cta active':'pill cta'} onClick={() => { setWho(null); setS('profile') }}>Profil · {user}</button>
           : <button className="pill cta" onClick={() => { setAfter('profile'); setTab('login'); setErr(''); setS('auth') }}>Logowanie</button>}
       </header>
       <main className="main">
@@ -90,10 +101,10 @@ export default function App() {
               <small>Konto zapisuje się lokalnie na tym urządzeniu (bez e-maila).</small>
             </form>
           </div>
-        ) : s === 'guides' ? <Guides /> : s === 'ai' ? <AiHelp /> : s === 'find' ? <PlayerSearch /> : s === 'lfd' ? <Lfd onChat={openChat} me={user} /> : s === 'profile' && user ? <Profile user={user} onLogout={() => { setUser(null); setChat(null); setS('home') }} /> : s === 'msgs' ? <Messages threads={threads} setThreads={setThreads} active={chat} setActive={setChat} /> : (
+        ) : s === 'guides' ? <Guides /> : s === 'ai' ? <AiHelp /> : s === 'find' ? <PlayerSearch /> : s === 'lfd' ? <Lfd onChat={openChat} me={user} /> : s === 'admin' && user ? (user.toLowerCase() === 'kubvss' ? <Admin meId={getAccount(user)?.id ?? 0} /> : <div className="glass"><h2>Brak dostępu</h2><p className="muted">Panel jest tylko dla właściciela.</p></div>) : s === 'profile' && user ? <Profile user={user} view={who} onAdmin={() => setS('admin')} onLogout={() => { setWho(null); setUser(null); setChat(null); setS('home') }} /> : s === 'msgs' ? <Messages threads={threads} setThreads={setThreads} active={chat} setActive={setChat} /> : (
           <div className={s==="home"?"glass hero left":"glass hero"}>
-            <h1>{content[s].title}</h1>
-            <p>{content[s].text}</p>
+            <h1>{content[s === 'profile' ? 'profile' : 'home'].title}</h1>
+            <p>{content[s === 'profile' ? 'profile' : 'home'].text}</p>
             {s === 'profile' && user && <>
               <div className="avatar">{user[0].toUpperCase()}</div>
               <p className="muted">{user} · konto #{getAccount(user)?.id ?? 1}</p>
@@ -105,7 +116,7 @@ export default function App() {
                 <button className="hm-card" onClick={() => setS('lfd')}><b>🤝 Szukanie duo</b><span>Ogłoszenia LFD z filtrem roli, rangi i trybu. Znajdź partnera na ranked w minutę.</span></button>
                 <button className="hm-card" onClick={() => setS('guides')}><b>📘 Poradniki i buildy</b><span>Wszyscy championi, buildy pod rangę. Start, pierwszy back, skill order.</span></button>
                 <button className="hm-card" onClick={() => setS('guides')}><b>📊 Tier lista z patcha</b><span>Win rate, pick rate i tier S–D aktualizowane po każdym patchu.</span></button>
-                <button className="hm-card" onClick={() => setS(user?'profile':'auth')}><b>👤 Profil gracza</b><span>Avatar, ramka, opis i reputacja +/−. Pokaż, z kim warto grać.</span></button>
+                <button className="hm-card" onClick={() => { setWho(null); setS(user?'profile':'auth') }}><b>👤 Profil gracza</b><span>Avatar, ramka, opis i reputacja +/−. Pokaż, z kim warto grać.</span></button>
               </div>
               <div className="hm-note"><b>Cześć! 👋</b><p>Rifted to projekt, który tworzę na studia — z pomocą AI. Wszystko utrzymuję i opłacam sam, więc będzie mi bardzo miło, jeśli zostaniesz i będziesz z niego korzystać. Mam nadzieję, że projekt będzie się rozwijał i zostanie z nami na długo. 💜</p></div>
               <div className="hm-stats"><div><b>170+</b><span>championów</span></div><div><b>EUNE · EUW</b><span>serwery</span></div></div>
@@ -116,7 +127,8 @@ export default function App() {
         )}
       </main>
       {user && <MusicBar user={user} />}
-      <footer className="app-foot"><span><b>Kontakt</b> — e-mail wkrótce</span><span className="af-sep">·</span><span>© 2026 <b>kubvss</b>. Wszelkie prawa zastrzeżone. Kopiowanie bez zgody autora zabronione.</span></footer>
+      {user && <UsersDock me={user} onOpen={u => { setWho(u); setS('profile') }} />}
+      <footer className="app-foot"><span><b>Kontakt</b> — <a href="mailto:czystekontorazdwa12@gmail.com">czystekontorazdwa12@gmail.com</a></span><span className="af-sep">·</span><span>© 2026 <b>kubvss</b>. Wszelkie prawa zastrzeżone. Kopiowanie bez zgody autora zabronione.</span></footer>
       <div className="themebox">
         {pick && <><div className="themeveil" onClick={() => setPick(false)} />
         <div className="themepick glass" role="listbox">
