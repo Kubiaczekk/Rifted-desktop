@@ -46,8 +46,7 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: --bundles nsis,msi
-          uploadUpdaterJson: false
-          uploadWorkflowArtifacts: true
+          includeUpdaterJson: false
 
       - name: Print release URL
         run: echo "Release ${{ steps.tauri.outputs.releaseHtmlUrl }}"
