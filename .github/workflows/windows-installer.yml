@@ -1,0 +1,53 @@
+name: Windows installer
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Build NSIS/MSI and publish GitHub Release
+        id: tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Tag pushes attach to that tag. Manual runs publish rifted-win-<run>.
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('rifted-win-{0}', github.run_number) }}
+          releaseName: ${{ github.ref_type == 'tag' && format('Rifted {0}', github.ref_name) || format('Rifted Windows {0}', github.run_number) }}
+          releaseBody: |
+            Windows installer for Rifted.
+            Download the NSIS setup executable (`*-setup.exe`). An MSI installer is attached when the WiX bundle is produced.
+            Built from ${{ github.sha }}.
+          releaseDraft: false
+          prerelease: false
+          args: --bundles nsis,msi
+          uploadUpdaterJson: false
+          uploadWorkflowArtifacts: true
+
+      - name: Print release URL
+        run: echo "Release ${{ steps.tauri.outputs.releaseHtmlUrl }}"
