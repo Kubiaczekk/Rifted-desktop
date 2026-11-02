@@ -1,6 +1,7 @@
 import { isOnline, avatar } from './presence'
 import { useEffect, useState } from 'react'
 import { api } from './api'
+import PlayerSearch from './PlayerSearch'
 type Post = { id: number; uid: number; nick: string; rola: string; szuka: string; ranga: string; tryb: string; smurf?: boolean; txt: string; t: number }
 const ROLE = ['Top', 'Jungle', 'Mid', 'ADC', 'Support']
 const RANGI = ['Unranked', 'Iron', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Emerald', 'Diamond', 'Master+']
@@ -19,6 +20,7 @@ export default function Lfd({ onChat, me }: { onChat: (nick: string, ico: string
   const [fr, setFr] = useState(''); const [fg, setFg] = useState(''); const [ft, setFt] = useState(''); const [q, setQ] = useState('')
   const [f, setF] = useState({ rola: 'Mid', szuka: 'Jungle', ranga: 'Gold', tryb: 'Solo/Duo', smurf: false, txt: '' })
   const [cd, setCd] = useState(0); const [err, setErr] = useState(''); const [, tick] = useState(0)
+  const [seek, setSeek] = useState(false)
   useEffect(() => { const id = setInterval(() => { tick(x => x + 1); setCd(c => Math.max(0, c - 1)) }, 1000); return () => clearInterval(id) }, [])
   const add = async (e: React.FormEvent) => {
     e.preventDefault(); setErr('')
@@ -48,6 +50,11 @@ export default function Lfd({ onChat, me }: { onChat: (nick: string, ico: string
       </div>
       <div className="glass lfd-list">
         <div className="lfd-h"><h2>Szukam duo</h2><span className="muted">{(() => { const n = list.length; const m = n % 10, t = n % 100; if (n === 1) return '1 ogłoszenie'; if (m >= 2 && m <= 4 && !(t >= 12 && t <= 14)) return `${n} ogłoszenia`; return `${n} ogłoszeń` })()}</span></div>
+        <button type="button" className={seek ? 'lfd-search-tile on' : 'lfd-search-tile'} aria-expanded={seek} onClick={() => setSeek(v => !v)}>
+          <b>🔍 Wyszukaj gracza</b>
+          <span>Nick Riot, ranga i ostatnie gry z DeepLOL.</span>
+        </button>
+        {seek ? <PlayerSearch onClose={() => setSeek(false)} /> : <>
         <div className="lfd-q">{[['', 'Wszystkie'], ['smurf', '🕶️ Tylko smurfy'], ['Solo/Duo', 'Solo/Duo ranked'], ['Flex', 'Flex'], ['Draft', 'Draft']].map(([k, l]) => <button key={k} className={`lfd-chip${q === k ? ' on' : ''}`} onClick={() => setQ(k)}>{l}</button>)}</div>
         <div className="lfd-fil"><Sel v={fr} set={setFr} opts={ROLE} all="Każda rola" /><Sel v={fg} set={setFg} opts={RANGI} all="Każda ranga" /><Sel v={ft} set={setFt} opts={TRYBY} all="Każdy tryb" /></div>
         <div className="lfd-items">
@@ -62,6 +69,7 @@ export default function Lfd({ onChat, me }: { onChat: (nick: string, ico: string
             {p.nick !== me && <button className="pill chatbtn" onClick={() => onChat(p.nick, ICO[p.rola], p.uid)}>💬 Czat</button>}
           </div>)}
         </div>
+        </>}
       </div>
     </div>)
 }
