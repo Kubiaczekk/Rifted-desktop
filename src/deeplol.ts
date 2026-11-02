@@ -53,7 +53,6 @@ export type Profile = {
   region: string
   level: number
   icon: string
-  url: string
   rank: string
   rankKey: string
   lp: number | null
@@ -74,8 +73,8 @@ export type LookupResult =
   | { kind: 'missing' }
   | { kind: 'choose'; options: Suggestion[] }
 
-const NET = 'Nie udało się połączyć z DeepLOL. Sprawdź internet i spróbuj ponownie.'
-const BAD = 'DeepLOL nie zwrócił profilu. Spróbuj ponownie za chwilę.'
+const NET = 'Nie udało się pobrać profilu. Sprawdź internet i spróbuj ponownie.'
+const BAD = 'Nie udało się pobrać profilu. Spróbuj ponownie za chwilę.'
 
 export function regionById(id: string) {
   return REGIONS.find(r => r.id === id) ?? REGIONS[0]
@@ -355,7 +354,6 @@ export async function lookupPlayer(raw: string, regionId: string): Promise<Looku
       region: region.label,
       level: Number(info.level) || 0,
       icon: iconId ? `https://ddragon.leagueoflegends.com/cdn/${ver}/img/profileicon/${iconId}.png` : '',
-      url: `https://www.deeplol.gg/summoner/${region.slug}/${encodeURIComponent(`${info.riot_id_name}-${info.riot_id_tag_line}`)}`,
       rank: rank?.text || 'Brak rangi',
       rankKey: rank?.key || 'Unranked',
       lp,
@@ -369,7 +367,7 @@ export async function lookupPlayer(raw: string, regionId: string): Promise<Looku
       mains: pool.mains,
       roles: pool.roles,
       games,
-      gamesNote: games.length ? (recent.failed ? 'Część ostatnich gier nie wczytała się z DeepLOL.' : null) : 'DeepLOL nie zwrócił ostatnich gier tego gracza.',
+      gamesNote: games.length ? (recent.failed ? 'Część ostatnich gier chwilowo się nie wczytała.' : null) : 'Brak ostatnich gier tego gracza.',
     },
   }
 }

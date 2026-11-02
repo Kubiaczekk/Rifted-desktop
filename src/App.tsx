@@ -13,8 +13,9 @@ import './index.css'
 import Guides from './Guides'
 import AiHelp from './AiHelp'
 import Lfd from './Lfd'
+import PlayerSearch from './PlayerSearch'
 import Messages, { syncConversations, loadThreads, type Thread } from './Messages'
-type Screen = 'home' | 'guides' | 'lfd' | 'ai' | 'msgs' | 'auth' | 'profile'
+type Screen = 'home' | 'guides' | 'lfd' | 'find' | 'ai' | 'msgs' | 'auth' | 'profile'
 const content: Record<'home'|'guides'|'lfd'|'profile', { title: string; text: string }> = {
   home: { title: 'Witaj w Rifted', text: 'Twoje polskie miejsce na Summoner\'s Rift.' },
   guides: { title: 'Poradniki', text: 'Lista gajdów, ranking (lajk/dislike) i kreator buildów — wkrótce.' },
@@ -39,7 +40,7 @@ export default function App() {
   const setUser = (u: string | null) => { setUserRaw(u); if (u) localStorage.setItem('rifted-user', u); else { localStorage.removeItem('rifted-user'); localStorage.removeItem('rifted-threads'); setThreads(() => []); logout() } }
   useEffect(() => { if (!user) return; let first = true; const go = () => { syncConversations(setThreads, chat, first).catch(() => {}); first = false }; go(); const iv = setInterval(go, 15000); return () => clearInterval(iv) }, [user, chat])
   const [after, setAfter] = useState<Screen>('profile')
-  const GATED: Screen[] = ['lfd','ai','msgs','profile']
+  const GATED: Screen[] = ['lfd','find','ai','msgs','profile']
   const locked = (k: Screen) => !user && GATED.includes(k)
   const [tab, setTab] = useState<'login' | 'register'>('login')
   const [nick, setNick] = useState('')
@@ -54,7 +55,7 @@ export default function App() {
       <header className="top">
         <div className="logo" onClick={() => setS('home')}><span className="wm" aria-label="Rifted"><span className="wm-ring" /><span className="wm-rift" /><span className="wm-txt"><span className="wm-r">R</span><span className="wm-i">ifted</span></span></span></div>
         <nav className="pills">
-          {([['home','Home'],['guides','Poradniki'],['lfd','LFD'],['ai','AI pomoc'],['msgs','💬 Wiadomości']] as const).map(([k,l]) => (
+          {([['home','Home'],['guides','Poradniki'],['lfd','LFD'],['find','Wyszukaj gracza'],['ai','AI pomoc'],['msgs','💬 Wiadomości']] as const).map(([k,l]) => (
             <button key={k} className={s===k?'pill active':'pill'} onClick={() => setS(k)} title={locked(k)?'Wymaga zalogowania':undefined}>{locked(k) && <span className="lockico">🔒</span>}{l}{k==='msgs' && unread>0 && <span className="nbadge">{unread}</span>}</button>
           ))}
         </nav>
@@ -67,7 +68,7 @@ export default function App() {
           <div className="glass gate">
             <div className="gate-ico">🔒</div>
             <h2>Ta sekcja jest dla zalogowanych</h2>
-            <p>{({lfd:'Szukanie duo (LFD)',ai:'AI pomoc',msgs:'Wiadomości',profile:'Profil'} as Record<string,string>)[s]} jest dostępne tylko po zalogowaniu. Jako gość możesz przeglądać Home i Poradniki.</p>
+            <p>{({lfd:'Szukanie duo (LFD)',find:'Wyszukaj gracza',ai:'AI pomoc',msgs:'Wiadomości',profile:'Profil'} as Record<string,string>)[s]} jest dostępne tylko po zalogowaniu. Jako gość możesz przeglądać Home i Poradniki.</p>
             <div className="gate-btns">
               <button className="pill cta big" onClick={() => { setAfter(s); setTab('login'); setS('auth') }}>Zaloguj się</button>
               <button className="pill big" onClick={() => { setAfter(s); setTab('register'); setS('auth') }}>Załóż konto</button>
@@ -89,7 +90,7 @@ export default function App() {
               <small>Konto zapisuje się lokalnie na tym urządzeniu (bez e-maila).</small>
             </form>
           </div>
-        ) : s === 'guides' ? <Guides /> : s === 'ai' ? <AiHelp /> : s === 'lfd' ? <Lfd onChat={openChat} me={user} /> : s === 'profile' && user ? <Profile user={user} onLogout={() => { setUser(null); setChat(null); setS('home') }} /> : s === 'msgs' ? <Messages threads={threads} setThreads={setThreads} active={chat} setActive={setChat} /> : (
+        ) : s === 'guides' ? <Guides /> : s === 'ai' ? <AiHelp /> : s === 'find' ? <PlayerSearch /> : s === 'lfd' ? <Lfd onChat={openChat} me={user} /> : s === 'profile' && user ? <Profile user={user} onLogout={() => { setUser(null); setChat(null); setS('home') }} /> : s === 'msgs' ? <Messages threads={threads} setThreads={setThreads} active={chat} setActive={setChat} /> : (
           <div className={s==="home"?"glass hero left":"glass hero"}>
             <h1>{content[s].title}</h1>
             <p>{content[s].text}</p>

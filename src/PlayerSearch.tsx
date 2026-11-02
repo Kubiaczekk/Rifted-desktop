@@ -44,7 +44,7 @@ function Card({ p }: { p: Profile }) {
         </div>
       </header>
       {p.badge === 'smurf' && <div className="ps-flag smurf">Podejrzenie smurfa<small>na podstawie {p.badgeFrom}</small></div>}
-      {p.badge === 'weak' && <div className="ps-flag weak">Słabszy gracz — ostrożnie z duo<small>na podstawie {p.badgeFrom}</small></div>}
+      {p.badge === 'weak' && <div className="ps-flag weak">Słabszy gracz — niższa skuteczność<small>na podstawie {p.badgeFrom}</small></div>}
       <div className="ps-stats">
         <div><b>{p.sampleWr == null ? '—' : wr(p.sampleWr)}</b><span>WR · ostatnie {gry(p.sampleGames)}</span></div>
         <div><b>{p.avgKda == null ? '—' : kdaTxt(p.avgKda)}</b><span>Średnie KDA</span></div>
@@ -67,12 +67,11 @@ function Card({ p }: { p: Profile }) {
       {p.games.length === 0 && <p className="muted ps-empty">{p.gamesNote}</p>}
       {p.games.length > 0 && <div className="ps-games">{p.games.map((g, i) => <Game key={i} g={g} />)}</div>}
       {p.gamesNote && p.games.length > 0 && <p className="muted ps-empty">{p.gamesNote}</p>}
-      <a className="pill ps-link" href={p.url} target="_blank" rel="noreferrer">Otwórz na DeepLOL</a>
     </article>
   )
 }
 
-export default function PlayerSearch({ onClose }: { onClose: () => void }) {
+export default function PlayerSearch() {
   const [region, setRegion] = useState<string>(DEFAULT_REGION)
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
@@ -85,7 +84,7 @@ export default function PlayerSearch({ onClose }: { onClose: () => void }) {
     setErr(''); setOpts(null); setProfile(null); setHint(false); setBusy(true)
     try {
       const res = await lookupPlayer(query, region)
-      if (res.kind === 'missing') setErr('Nie znaleziono gracza na DeepLOL. Sprawdź nick, tag (#) i region.')
+      if (res.kind === 'missing') setErr('Nie znaleziono gracza. Sprawdź nick, tag (#) i region.')
       else if (res.kind === 'choose') setOpts(res.options)
       else setProfile(res.profile)
     } catch (e) { setErr((e as Error).message) }
@@ -93,16 +92,16 @@ export default function PlayerSearch({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="ps">
-      <button type="button" className="ps-back" onClick={onClose}>← Wróć do ogłoszeń</button>
+    <div className="glass ps-screen">
+      <h2>Wyszukaj gracza</h2>
       <form className="ps-form" onSubmit={e => { e.preventDefault(); run(q) }}>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Nick, np. Jankos#EUNE" maxLength={40} aria-label="Nick Riot" />
         <select value={region} onChange={e => setRegion(e.target.value)} aria-label="Region">
           {REGIONS.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
         </select>
-        <button className="pill cta" type="submit" disabled={busy}>{busy ? 'Szukam…' : 'Szukaj'}</button>
+        <button className="pill cta" type="submit" disabled={busy}>Wyszukaj gracza</button>
       </form>
-      {busy && <p className="muted ps-empty">Szukam na DeepLOL…</p>}
+      {busy && <p className="muted ps-empty">Szukam gracza…</p>}
       {!busy && hint && <p className="muted ps-empty">Wpisz nick Riot. Tag po # jest opcjonalny — bez niego użyjemy domyślnego dla regionu (EUNE albo EUW).</p>}
       {err && <div className="lfd-err">{err}</div>}
       {opts && !busy && (
