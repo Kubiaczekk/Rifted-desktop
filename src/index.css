@@ -158,7 +158,7 @@ h1,h2,h3,.logo,.hero h1,.pill,.pills button,.tabs button,.skills,.tier,[class*="
 .hm-card{all:unset;cursor:pointer;display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid color-mix(in srgb,var(--a) 28%,transparent);transition:transform .2s,background .2s,box-shadow .2s;min-width:0}
 .hm-card b{font-size:15px;color:#fff;line-height:1.3}.hm-card span{font-size:12.5px;line-height:1.5;color:var(--t);opacity:.85;overflow-wrap:anywhere}
 .hm-card:hover{transform:scale(1.04);background:color-mix(in srgb,var(--a) 16%,transparent);box-shadow:0 8px 24px color-mix(in srgb,var(--a) 30%,transparent)}
-.hm-stats{display:flex;gap:10px;margin-bottom:18px}.hm-stats div{flex:1;text-align:center;padding:10px 6px;border-radius:14px;background:rgba(0,0,0,.2)}
+.hm-stats{display:flex;gap:10px;margin-bottom:18px}.hm-stats div{flex:0 1 auto;min-width:140px;text-align:center;padding:10px 18px;border-radius:14px;background:rgba(0,0,0,.2)}
 .hm-stats b{display:block;font-size:18px;color:var(--a);line-height:1.3}.hm-stats span{font-size:11.5px;color:var(--t);opacity:.8}
 .hm-cta{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}.hm-theme{font-size:12px;margin:0!important}
 
@@ -531,7 +531,7 @@ button.otpl{background:none;border:0;padding:0;color:inherit;font:inherit;cursor
 .prof-viewas{position:relative;z-index:2;margin:0 0 10px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;margin-bottom:8px;border-radius:10px;background:rgba(255,80,180,.15);border:1px solid rgba(255,80,180,.4);font-size:13px}
 
 .pm-card{display:flex;text-align:left;flex-direction:column;gap:10px;padding:14px;border-radius:16px;background:linear-gradient(135deg,rgba(139,92,246,.22),rgba(59,130,246,.12));border:1px solid rgba(167,139,250,.4);box-shadow:0 0 24px rgba(139,92,246,.25)}
-.pm-head{display:flex!important;flex-direction:row!important;align-items:center;gap:10px;text-align:left}.pm-head small{margin-left:auto}
+.pm-card .pm-head{display:flex!important;flex-direction:row!important;align-items:center;gap:10px;text-align:left}.pm-card .pm-head small{margin-left:auto}
 .pm-card iframe{width:100%;height:150px;border:0;border-radius:12px}.pm-card iframe.sp{height:152px}
 .pm-vol{display:flex;align-items:center;gap:8px}.pm-vol input{flex:1;accent-color:#a78bfa}
 .pm-eq{display:inline-flex;gap:2px;align-items:flex-end;height:14px}.pm-eq i{width:3px;background:#a78bfa;border-radius:2px;animation:pmeq 1s infinite ease-in-out}
@@ -683,3 +683,33 @@ input,.search{padding:8px 14px;font-size:13px}
 .admin-row em{font-style:normal;font-size:10px;margin-left:6px;padding:2px 6px;border-radius:999px;background:color-mix(in srgb,var(--a) 28%,transparent)}
 .other-prof{width:min(560px,94vw)}
 @media (max-width:760px){.admin-stats{grid-template-columns:1fr 1fr}}
+
+/* OTP player modal: tight glass card, rank never breaks mid-word, games list */
+.pm-back{padding:16px!important}
+.glass.pm{width:min(680px,calc(100vw - 32px))!important;max-height:min(860px,calc(100vh - 32px));padding:16px 16px 14px!important;border-radius:18px!important;overflow:auto}
+.glass.pm .pm-head{flex-direction:row!important;align-items:center!important;text-align:left!important;gap:12px!important;margin:0 0 12px!important}
+.glass.pm .pm-av{width:58px;height:58px;flex:none;position:relative;background:linear-gradient(135deg,var(--a),var(--b))}
+.glass.pm .pm-av img.pm-pi,.glass.pm .pm-av img.pm-face{width:100%;height:100%;object-fit:cover;transform:none}
+.glass.pm .pm-badge{position:absolute;right:-4px;bottom:-4px;width:24px!important;height:24px!important;border-radius:7px!important;border:2px solid #140e28;transform:none!important;box-shadow:0 2px 8px rgba(0,0,0,.5);background:#140e28}
+.glass.pm .pm-letter{font-size:24px}
+.glass.pm .pm-id{min-width:0;flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.glass.pm .pm-head > .pm-x{position:static!important;top:auto!important;right:auto!important;left:auto!important;flex:none;align-self:flex-start;margin:0;z-index:2}
+.glass.pm .pm-head h2{margin:0!important;font-size:22px!important;line-height:1.15;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;overflow-wrap:normal;word-break:keep-all}
+.glass.pm .pm-tags{justify-content:flex-start;flex-wrap:wrap;gap:6px}
+.glass.pm .pm-tags span{white-space:nowrap;overflow-wrap:normal;word-break:keep-all}
+.glass.pm .pm-stats{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important;margin:0 0 12px!important}
+.glass.pm .pm-stat{width:auto;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:3px;padding:10px 6px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);overflow-wrap:normal;word-break:keep-all}
+.glass.pm .pm-stat b{font-size:18px!important;line-height:1.1;white-space:nowrap;color:#fff}
+.glass.pm .pm-stat span{font-size:11px;line-height:1.25;opacity:.85;white-space:nowrap}
+.glass.pm .pm-h3{margin:2px 0 8px}
+.glass.pm .pm-c{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.glass.pm .pm-c small{display:block;font-size:11px;font-weight:500;opacity:.75;grid-area:auto}
+.glass.pm .pm-meta{white-space:nowrap}
+.glass.pm .pm-cimg{grid-area:i;width:40px;height:40px;border-radius:10px;object-fit:cover;display:grid;place-items:center}
+.pm-wait,.pm-empty{margin:0;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.16);text-align:left;font-size:13px;color:rgba(235,235,245,.88)}
+.pm-skel{height:54px;border-radius:12px;background:linear-gradient(90deg,rgba(255,255,255,.04),rgba(255,255,255,.1),rgba(255,255,255,.04));background-size:200% 100%;animation:pmSh 1.15s ease-in-out infinite}
+@keyframes pmSh{from{background-position:100% 0}to{background-position:-100% 0}}
+@media (max-width:640px){
+  .glass.pm .pm-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .glass.pm .pm-stat span{white-space:normal}
+}

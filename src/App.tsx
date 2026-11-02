@@ -119,7 +119,7 @@ export default function App() {
                 <button className="hm-card" onClick={() => { setWho(null); setS(user?'profile':'auth') }}><b>👤 Profil gracza</b><span>Avatar, ramka, opis i reputacja +/−. Pokaż, z kim warto grać.</span></button>
               </div>
               <div className="hm-note"><b>Cześć! 👋</b><p>Rifted to projekt, który tworzę na studia — z pomocą AI. Wszystko utrzymuję i opłacam sam, więc będzie mi bardzo miło, jeśli zostaniesz i będziesz z niego korzystać. Mam nadzieję, że projekt będzie się rozwijał i zostanie z nami na długo. 💜</p></div>
-              <div className="hm-stats"><div><b>170+</b><span>championów</span></div><div><b>EUNE · EUW</b><span>serwery</span></div></div>
+              <div className="hm-stats"><div><b>EUNE · EUW</b><span>serwery</span></div></div>
               <p className="muted hm-theme">Motyw: {th.name}</p>
             </>}
             {s !== 'profile' && s !== 'home' && <div className="bubble">Ekran w budowie ✦</div>}
