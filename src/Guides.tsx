@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { api } from './api'
+import { lookupPlayer, regionIdFromPlatform, type GameRow } from './deeplol'
 import { EARLY as META_EARLY, META } from './metaBuilds'
 const DD = 'https://ddragon.leagueoflegends.com'
 type Role = 'Top'|'Jungle'|'Mid'|'ADC'|'Support'
@@ -203,22 +204,77 @@ function topOtps(body: { players?: unknown } | null | undefined): OtpPlayer[] {
   return rows.sort((a, b) => b.lp - a.lp).slice(0, 3)
 }
 function riotId(o: OtpPlayer) { return o.tag ? `${o.nick}#${o.tag}` : o.nick }
-function PlayerModal({ o, c, ver, close }: { o: OtpPlayer; c: Champ; ver: string; close: () => void }) {
+function kdaNum(k: number, d: number, a: number) { return d ? (k + a) / d : k + a }
+function kdaTxt(n: number) { return n.toLocaleString('pl-PL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }
+function PlayerGame({ g }: { g: GameRow }) {
   const [bad, setBad] = useState(false)
+  return <div className={'pm-g ' + (g.win ? 'win' : 'loss')}>
+    <b className="pm-r">{g.win ? 'W' : 'L'}</b>
+    {g.champImg && !bad ? <img className="pm-cimg" src={g.champImg} alt="" onError={() => setBad(true)} /> : <span className="pm-cimg pm-letter">{(g.champ || '?').slice(0, 1)}</span>}
+    <span className="pm-c">{g.champ}{g.role && g.role !== '—' ? <small>{g.role}</small> : null}</span>
+    <span className="pm-k">{g.k} / {g.d} / {g.a}</span>
+    <small className="pm-meta">{kdaTxt(kdaNum(g.k, g.d, g.a))} KDA{g.queue ? ` · ${g.queue}` : ''}{g.min ? ` · ${g.min} min` : ''}</small>
+    <div className="pm-it">{g.items.map((it, i) => <img key={`${it.id}-${i}`} src={it.img} alt="" />)}</div>
+  </div>
+}
+function PlayerModal({ o, c, ver, close }: { o: OtpPlayer; c: Champ; ver: string; close: () => void }) {
+  const [iconBad, setIconBad] = useState(false)
+  const [champBad, setChampBad] = useState(false)
+  const [profileIcon, setProfileIcon] = useState('')
+  const [games, setGames] = useState<GameRow[] | null>(null)
+  const [phase, setPhase] = useState<'loading' | 'ok' | 'empty' | 'err'>('loading')
   useEffect(() => { const f = (e: KeyboardEvent) => e.key === 'Escape' && close(); addEventListener('keydown', f); return () => removeEventListener('keydown', f) }, [close])
   useEffect(() => { const b = document.body.style.overflow; document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = b } }, [])
+  const regionId = regionIdFromPlatform(o.region)
+  const canFetch = !!regionId && [...o.nick].length >= 3
+  useEffect(() => {
+    if (!regionId || !canFetch) return
+    let alive = true
+    lookupPlayer(o.tag ? `${o.nick}#${o.tag}` : o.nick, regionId).then(res => {
+      if (!alive) return
+      if (res.kind !== 'ok') { setGames([]); setPhase('empty'); return }
+      if (res.profile.icon) setProfileIcon(res.profile.icon)
+      const list = res.profile.games.slice(0, 10)
+      setGames(list)
+      setPhase(list.length ? 'ok' : 'empty')
+    }).catch(() => { if (alive) { setGames([]); setPhase('err') } })
+    return () => { alive = false }
+  }, [o.nick, o.tag, o.region, regionId, canFetch])
+  const shown = canFetch ? phase : 'empty'
   const name = riotId(o), region = shortRegion(o.region), tier = fmtTier(o.tier, o.rank)
-  const src = !bad && ver && o.iconId ? `${DD}/cdn/${ver}/img/profileicon/${o.iconId}.png` : ''
-  return createPortal(<div className="pm-back" onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: 'rgba(5,5,12,.72)', backdropFilter: 'blur(6px)' }}><div className="glass pm" onClick={e => e.stopPropagation()} style={{ position: 'relative', width: 'min(560px,100%)', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', margin: 0 }}>
-    <button className="pill pm-x" onClick={close} aria-label="Zamknij">✕</button>
-    <div className="pm-head"><div className="pm-av">{src ? <img className="pm-pi" src={src} alt="" onError={() => setBad(true)} /> : <span className="pm-letter">{(o.nick || '?').slice(0, 1).toUpperCase()}</span>}</div><h2>{name}</h2><div className="pm-tags"><span>{region}</span><span>{tier}</span><span className="pm-lp">{Math.round(o.lp)} LP</span></div></div>
-    <div className="pm-stats">
-      <div className="item"><b>{fmtWr(o.winRate)}%</b><span>WR na {c.pl}</span></div>
-      <div className="item"><b>{o.games.toLocaleString('pl')}</b><span>Gier na {c.pl}</span></div>
-      <div className="item"><b>{tier}</b><span>Ranga</span></div>
-      <div className="item"><b>{Math.round(o.lp)}</b><span>LP</span></div>
-      <div className="item"><b>{region}</b><span>Region</span></div>
+  const champSrc = ver ? `${DD}/cdn/${ver}/img/champion/${c.id}.png` : ''
+  const profileSrc = profileIcon || (ver && o.iconId ? `${DD}/cdn/${ver}/img/profileicon/${o.iconId}.png` : '')
+  const showProfile = !!profileSrc && !iconBad
+  const avatar = showProfile ? profileSrc : (!champBad ? champSrc : '')
+  const sample = games || []
+  const wins = sample.filter(g => g.win).length
+  const ka = sample.reduce((s, g) => s + g.k + g.a, 0)
+  const deaths = sample.reduce((s, g) => s + g.d, 0)
+  const recent = shown === 'loading' ? '…' : sample.length ? `${wins}W ${sample.length - wins}L` : '—'
+  const kda = shown === 'loading' ? '…' : sample.length ? kdaTxt(kdaNum(ka, deaths, 0)) : '—'
+  return createPortal(<div className="pm-back" onClick={close}><div className="glass pm" role="dialog" aria-modal="true" aria-label={name} onClick={e => e.stopPropagation()}>
+    <div className="pm-head">
+      <div className="pm-av">
+        {avatar ? <img className={showProfile ? 'pm-pi' : 'pm-face'} src={avatar} alt="" onError={() => showProfile ? setIconBad(true) : setChampBad(true)} /> : <span className="pm-letter">{(o.nick || '?').slice(0, 1).toUpperCase()}</span>}
+        {showProfile && champSrc && !champBad && <img className="pm-badge" src={champSrc} alt="" onError={() => setChampBad(true)} />}
+      </div>
+      <div className="pm-id">
+        <h2 title={name}>{name}</h2>
+        <div className="pm-tags"><span>{region}</span><span className="pm-tier">{tier}</span><span className="pm-lp">{Math.round(o.lp)} LP</span></div>
+      </div>
+      <button className="pill pm-x" onClick={close} aria-label="Zamknij">✕</button>
     </div>
+    <div className="pm-stats">
+      <div className="pm-stat"><b>{fmtWr(o.winRate)}%</b><span>WR na {c.pl}</span></div>
+      <div className="pm-stat"><b>{o.games.toLocaleString('pl')}</b><span>Gier na {c.pl}</span></div>
+      <div className="pm-stat"><b>{recent}</b><span>Ostatnie 10</span></div>
+      <div className="pm-stat"><b>{kda}</b><span>KDA · 10 gier</span></div>
+    </div>
+    <h3 className="pm-h3">Ostatnie 10 gier</h3>
+    {shown === 'loading' && <div className="pm-games" aria-busy="true"><p className="pm-wait">Wczytuję ostatnie gry…</p>{[0, 1, 2].map(i => <div key={i} className="pm-skel" />)}</div>}
+    {shown === 'empty' && <p className="pm-empty">Brak ostatnich gier tego gracza.</p>}
+    {shown === 'err' && <p className="pm-empty">Nie udało się wczytać ostatnich gier. Spróbuj ponownie za chwilę.</p>}
+    {shown === 'ok' && games && <div className="pm-games">{games.map((g, i) => <PlayerGame key={`${g.champ}-${i}`} g={g} />)}</div>}
   </div></div>, document.body)
 }
 
@@ -403,7 +459,7 @@ export default function Guides() {
     return { wr: wr.toFixed(1), pr: pr.toFixed(1), games: a[1], tier: tierOf(wr, pr) } }
   const img = (p: string) => `${DD}/cdn/${ver}/img/${p}`
   const rankBar = <div className="roles">{RANKS.map((r, k) => <button key={r} className={rank===k?'pill active':'pill'} onClick={() => setRank(k)}>{r}</button>)}</div>
-  const note = <p className="muted" style={{fontSize:12,opacity:.7}}>{`Patch ${ver || '…'} · Data Dragon · ${Object.values(ugg).some(Boolean) ? `statystyki: u.gg (patch ${patch.replace('_','.')}, Ranked Solo, świat)` : 'statystyki poglądowe (u.gg niedostępne)'}`}</p>
+  const note = <p className="muted" style={{fontSize:12,opacity:.7}}>{`Patch ${ver || '…'} · Data Dragon · ${Object.values(ugg).some(Boolean) ? `statystyki ranked (patch ${patch.replace('_','.')}, świat)` : 'statystyki poglądowe'}`}</p>
   if (sel) {
     const c = sel, L = live(c), f = stats(c, rank, v), s = L ? { ...f, wr: L.wr, pr: L.pr, games: L.games } : f, tr = L?.tier || tierOf(+f.wr, +f.pr), b = build(c, items, v, rank), e = early(c), im = new Map(items.map(i => [i.id, i])), row = (ids: string[]) => <div className="items">{ids.map((id, k) => { const it = im.get(id); return it ? <div key={id+k} className="item" title={`${it.gold} g`}><img src={img(`item/${id}.png`)} alt={it.name} /><span>{it.name} · {it.gold} g</span></div> : null })}</div>
     return (
@@ -420,7 +476,7 @@ export default function Guides() {
           <div className="item"><b style={{fontSize:22}}>{s.wr}%</b><span>Win rate</span></div>
           <div className="item"><b style={{fontSize:22}}>{s.pr}%</b><span>Pick rate</span></div>
           <div className="item"><b style={{fontSize:22}}>{s.br}%</b><span>Ban rate{L?' (szac.)':''}</span></div>
-          <div className="item"><b style={{fontSize:22}}>{s.games.toLocaleString('pl')}</b><span>Gier{L?' · u.gg':' (poglądowo)'}</span></div>
+          <div className="item"><b style={{fontSize:22}}>{s.games.toLocaleString('pl')}</b><span>Gier{L?'':' (poglądowo)'}</span></div>
         </div>
         <h3>Na start</h3>{row(e.start)}
         <h3>Pierwszy back</h3>{row(e.back)}

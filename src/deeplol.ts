@@ -80,6 +80,19 @@ export function regionById(id: string) {
   return REGIONS.find(r => r.id === id) ?? REGIONS[0]
 }
 
+/** Map a platform id from our server (`euw1`, `KR`, `na1`) onto a lookup region. */
+export function regionIdFromPlatform(raw: string): RegionId | null {
+  const s = raw.trim().toLowerCase()
+  if (!s) return null
+  const hit = REGIONS.find(r =>
+    r.platform.toLowerCase() === s ||
+    r.id.toLowerCase() === s ||
+    r.slug === s ||
+    r.label.toLowerCase() === s ||
+    r.tag.toLowerCase() === s)
+  return hit ? hit.id : null
+}
+
 export function parseRiotId(raw: string, defaultTag: string): { name: string; tag: string; explicit: boolean } | null {
   const s = raw.trim().replace(/\s+/g, ' ')
   if (!s) return null
